@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-20vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.balloon-animate {
+  position: fixed;
+  bottom: -50px;
+  animation: floatUp 5s ease-in infinite;
+  pointer-events: none;
+  z-index: 999;
+}
