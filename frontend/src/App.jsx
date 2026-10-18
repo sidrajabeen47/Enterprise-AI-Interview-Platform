@@ -41,8 +41,8 @@ export default function App() {
           question_bank: questionBank,
           tech_documentation: techDocs,
           evaluation_criteria: [
-            { name: 'Technical Accuracy & Implementation', weight: '50%' },
-            { name: 'Consistency Across All Questions', weight: '50%' }
+            { name: 'Technical Depth & Domain Accuracy', weight: '50%' },
+            { name: 'Consistency Across Evaluated Questions', weight: '50%' }
           ]
         })
       });
@@ -142,8 +142,8 @@ export default function App() {
           role_title: roleTitle,
           transcript: messages,
           evaluation_criteria: [
-            { name: 'Technical Accuracy & Implementation', weight: '50%' },
-            { name: 'Consistency Across All Questions', weight: '50%' }
+            { name: 'Technical Depth & Domain Accuracy', weight: '50%' },
+            { name: 'Consistency Across Evaluated Questions', weight: '50%' }
           ]
         })
       });
@@ -159,22 +159,21 @@ export default function App() {
       candidateMsgs.forEach(txt => {
         const lower = txt.toLowerCase();
         const hasGibberish = txt.length < 8 || lower.includes('whiun') || lower.includes('djkf');
-        const hasGoodKeywords = lower.includes('vtaskdelay') || lower.includes('queue') || lower.includes('clock') || lower.includes('chunk') || lower.includes('cache');
-        if (!hasGibberish && txt.length > 35 && hasGoodKeywords) {
+        if (!hasGibberish && txt.length > 30) {
           passedCount++;
         }
       });
 
       const calculatedScore = Math.round((passedCount / totalQuestions) * 100);
-      const isSelected = calculatedScore >= 90;
+      const isSelected = calculatedScore >= 85;
 
       setScorecard({
-        overall_decision: isSelected ? 'Strong Hire' : calculatedScore >= 60 ? 'Needs Re-evaluation' : 'No Hire',
+        overall_decision: isSelected ? 'Strong Hire' : calculatedScore >= 70 ? 'Needs Re-evaluation' : 'No Hire',
         composite_score: calculatedScore,
         summary: `Evaluated ${totalQuestions} candidate answer(s). Passed: ${passedCount}/${totalQuestions}. Composite score: ${calculatedScore}%.`,
         rubric_scores: [
           {
-            dimension: 'Technical Accuracy & Implementation',
+            dimension: 'Technical Depth & Domain Accuracy',
             score: calculatedScore,
             max_score: 100,
             evidence: `Candidate successfully answered ${passedCount} out of ${totalQuestions} question(s).`,
@@ -222,7 +221,7 @@ export default function App() {
                 <label className="block text-xs font-semibold text-slate-400 mb-1">Target Position / Role Title</label>
                 <input
                   type="text"
-                  placeholder="e.g. Senior Backend Engineer, IoT Specialist, Product Designer..."
+                  placeholder="e.g. Senior Backend Engineer, IoT Specialist, Cybersecurity Analyst..."
                   value={roleTitle}
                   onChange={(e) => setRoleTitle(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-sm focus:border-indigo-500 focus:outline-none placeholder:text-slate-600"
@@ -384,56 +383,58 @@ export default function App() {
         )}
 
         {activeTab === 'scorecard' && (
-          <div className="relative bg-slate-900 border border-slate-800 rounded-lg p-6 max-w-4xl mx-auto space-y-6 overflow-hidden">
+          <div className="relative bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-4xl mx-auto space-y-6 overflow-hidden">
             
-            {/* CELEBRATION FX: Only if score >= 90% */}
-            {scorecard && scorecard.composite_score >= 90 && (
+            {/* 1. SELECTION CELEBRATION (Score >= 85%) */}
+            {scorecard && scorecard.composite_score >= 85 && (
               <>
-                <div className="balloon-animate text-4xl" style={{ left: '10%', animationDelay: '0s' }}>🎈</div>
-                <div className="balloon-animate text-5xl" style={{ left: '25%', animationDelay: '1.2s' }}>🎉</div>
-                <div className="balloon-animate text-4xl" style={{ left: '45%', animationDelay: '0.5s' }}>🎈</div>
-                <div className="balloon-animate text-5xl" style={{ left: '65%', animationDelay: '2s' }}>🥳</div>
-                <div className="balloon-animate text-4xl" style={{ left: '80%', animationDelay: '1.5s' }}>🎈</div>
+                <div className="balloon-animate text-4xl" style={{ left: '8%', animationDelay: '0s' }}>🎈</div>
+                <div className="balloon-animate text-5xl" style={{ left: '22%', animationDelay: '1.2s' }}>🎉</div>
+                <div className="balloon-animate text-4xl" style={{ left: '40%', animationDelay: '0.4s' }}>🎈</div>
+                <div className="balloon-animate text-5xl" style={{ left: '60%', animationDelay: '2s' }}>🥳</div>
+                <div className="balloon-animate text-4xl" style={{ left: '78%', animationDelay: '1.5s' }}>🎈</div>
                 <div className="balloon-animate text-5xl" style={{ left: '92%', animationDelay: '0.8s' }}>🎊</div>
 
-                <div className="bg-gradient-to-r from-emerald-600 via-teal-500 to-indigo-600 p-6 rounded-xl text-center shadow-lg shadow-emerald-500/20 border border-emerald-400/40 animate-bounce">
+                <div className="bg-gradient-to-r from-emerald-600 via-teal-500 to-indigo-600 p-6 rounded-2xl text-center shadow-xl shadow-emerald-500/20 border border-emerald-400/40 animate-bounce">
                   <div className="text-4xl mb-2">🥳 🎈 🎊 🏆 ✨</div>
-                  <h1 className="text-2xl font-extrabold text-white tracking-wide uppercase">
+                  <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-wide uppercase">
                     Congratulations! You Are Selected!
                   </h1>
                   <p className="text-emerald-100 text-sm mt-1 font-medium">
-                    Outstanding performance! You scored an impressive {scorecard.composite_score}% and exceeded all hiring benchmarks.
+                    Outstanding technical performance! You scored an impressive {scorecard.composite_score}% and successfully passed all evaluation benchmarks.
                   </p>
                 </div>
               </>
             )}
 
-            {/* REJECTION BANNER: If score < 70% */}
-            {scorecard && scorecard.composite_score < 70 && (
-              <div className="bg-rose-950/60 border border-rose-800/80 p-5 rounded-xl text-center">
-                <div className="text-3xl mb-1">❌ ⚠️ 📋</div>
-                <h1 className="text-xl font-bold text-rose-400 tracking-wide uppercase">
+            {/* 2. REJECTION ALERT (Score < 75%) */}
+            {scorecard && scorecard.composite_score < 75 && (
+              <div className="bg-rose-950/70 border border-rose-800 p-6 rounded-2xl text-center shadow-lg shadow-rose-950/40">
+                <div className="text-4xl mb-2">❌ ⚠️ 📋</div>
+                <h1 className="text-2xl font-extrabold text-rose-400 tracking-wide uppercase">
                   Application Status: Not Selected
                 </h1>
-                <p className="text-rose-200/80 text-xs mt-1">
-                  Candidate scored {scorecard.composite_score}%, falling below the required minimum competency threshold (75%). Critical technical anti-patterns or incorrect answers were observed.
+                <p className="text-rose-200/90 text-sm mt-1 max-w-2xl mx-auto">
+                  Candidate scored <span className="font-bold text-white underline">{scorecard.composite_score}%</span>, which is below the minimum qualifying threshold (75%). Review the critical mistakes and recommended practice areas below to improve for future interviews.
                 </p>
               </div>
             )}
 
-            {/* Scorecard Header */}
+            {/* Header: Overview and Status */}
             <div className="flex justify-between items-center border-b border-slate-800 pb-4">
               <div>
                 <h2 className="text-lg font-bold">Automated Evaluation Summary</h2>
-                <p className="text-xs text-slate-400">Evaluated against uploaded requirements for {roleTitle}</p>
+                <p className="text-xs text-slate-400">Position Evaluated: <span className="text-slate-200 font-semibold">{roleTitle}</span></p>
               </div>
               {scorecard && (
                 <div className="text-right">
-                  <span className="text-xs uppercase tracking-wider text-slate-400 block">Decision</span>
+                  <span className="text-xs uppercase tracking-wider text-slate-400 block font-medium">Final Decision</span>
                   <span className={`text-base font-extrabold ${
-                    scorecard.composite_score >= 80 
-                      ? 'text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.8)]' 
-                      : 'text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]'
+                    scorecard.composite_score >= 85 
+                      ? 'text-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,0.8)]' 
+                      : scorecard.composite_score >= 70
+                      ? 'text-amber-400'
+                      : 'text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]'
                   }`}>
                     {scorecard.overall_decision} ({scorecard.composite_score}/100)
                   </span>
@@ -445,44 +446,66 @@ export default function App() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-xs font-semibold uppercase text-slate-400 mb-2">Executive Summary</h3>
-                  <p className="text-sm bg-slate-950 p-4 border border-slate-800 rounded text-slate-300">
+                  <p className="text-sm bg-slate-950 p-4 border border-slate-800 rounded-xl text-slate-300 leading-relaxed">
                     {scorecard.summary}
                   </p>
                 </div>
 
                 <div>
-                  <h3 className="text-xs font-semibold uppercase text-slate-400 mb-3">Rubric Breakdown</h3>
+                  <h3 className="text-xs font-semibold uppercase text-slate-400 mb-3">Turn-by-Turn Question Evaluation</h3>
                   <div className="space-y-3">
                     {scorecard.rubric_scores?.map((rubric, idx) => (
-                      <div key={idx} className="bg-slate-950 border border-slate-800 p-4 rounded">
+                      <div key={idx} className="bg-slate-950 border border-slate-800 p-4 rounded-xl">
                         <div className="flex justify-between text-sm font-semibold mb-1">
-                          <span>{rubric.dimension}</span>
-                          <span className={`font-bold ${rubric.score >= 70 ? 'text-indigo-400' : 'text-rose-400'}`}>
+                          <span className="text-slate-200">{rubric.dimension}</span>
+                          <span className={`font-mono font-bold ${
+                            rubric.score >= 80 ? 'text-indigo-400' : rubric.score >= 60 ? 'text-amber-400' : 'text-rose-400'
+                          }`}>
                             {rubric.score}/{rubric.max_score}
                           </span>
                         </div>
-                        <p className="text-xs text-emerald-400 mt-1">✓ {rubric.evidence}</p>
-                        {rubric.gap && <p className="text-xs text-rose-400 mt-1">✗ {rubric.gap}</p>}
+                        <p className="text-xs text-emerald-400 mt-2 font-medium">✓ Evaluation: {rubric.evidence}</p>
+                        {rubric.gap && <p className="text-xs text-rose-400 mt-1 font-medium">✗ Gaps / Issues: {rubric.gap}</p>}
                       </div>
                     ))}
                   </div>
                 </div>
 
+                {/* REJECTION ONLY: Identified Mistakes */}
                 {scorecard.red_flags && scorecard.red_flags.length > 0 && (
                   <div>
-                    <h3 className="text-xs font-semibold uppercase text-rose-400 mb-2">Critical Concerns (Red Flags)</h3>
-                    <ul className="list-disc list-inside text-xs text-rose-300 space-y-1 bg-rose-950/30 p-4 border border-rose-900/50 rounded">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2 flex items-center gap-2">
+                      <span>⚠️</span> What Went Wrong (Identified Mistakes)
+                    </h3>
+                    <ul className="list-disc list-inside text-xs text-rose-300 space-y-1.5 bg-rose-950/30 p-4 border border-rose-900/50 rounded-xl">
                       {scorecard.red_flags.map((flag, i) => (
-                        <li key={i}>{flag}</li>
+                        <li key={i} className="leading-relaxed">{flag}</li>
                       ))}
                     </ul>
                   </div>
                 )}
 
+                {/* REJECTION ONLY: Recommended Practice */}
+                {scorecard.composite_score < 75 && (
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-2 flex items-center gap-2">
+                      <span>💡</span> Recommended Practice Areas for Candidate
+                    </h3>
+                    <div className="bg-amber-950/20 border border-amber-900/40 p-4 rounded-xl text-xs text-amber-200/90 space-y-2">
+                      <p>• <strong>Deepen Core Domain Concepts:</strong> Practice structuring answers by detailing technical mechanisms, memory/hardware constraints, and architecture trade-offs.</p>
+                      <p>• <strong>Avoid Surface-Level or Vague Explanations:</strong> Provide end-to-end implementation specifics rather than one-line definitions.</p>
+                      <p>• <strong>Prepare for Real-World Edge Cases:</strong> Focus on failure modes, error recovery, input validation, and high-concurrency bottlenecks.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* PASS ONLY: Key Strengths */}
                 {scorecard.green_flags && scorecard.green_flags.length > 0 && (
                   <div>
-                    <h3 className="text-xs font-semibold uppercase text-emerald-400 mb-2">Key Strengths (Green Flags)</h3>
-                    <ul className="list-disc list-inside text-xs text-slate-300 space-y-1 bg-slate-950 p-4 border border-slate-800 rounded">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2 flex items-center gap-2">
+                      <span>✨</span> Key Strengths (Green Flags)
+                    </h3>
+                    <ul className="list-disc list-inside text-xs text-slate-300 space-y-1 bg-slate-950 p-4 border border-slate-800 rounded-xl">
                       {scorecard.green_flags.map((flag, i) => (
                         <li key={i}>{flag}</li>
                       ))}
