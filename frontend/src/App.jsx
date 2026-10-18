@@ -1,369 +1,10 @@
-// import React, { useState } from 'react';
-// import { 
-//   UploadCloud, Send, ShieldAlert, 
-//   RefreshCw, Award, Bot, User, AlertCircle 
-// } from 'lucide-react';
-
-// export default function App() {
-//   const [activeTab, setActiveTab] = useState('live'); // 'upload' | 'live' | 'scorecard'
-//   const [roleTitle, setRoleTitle] = useState('Senior Full-Stack AI Engineer');
-//   const [jobDescription, setJobDescription] = useState('Looking for an engineer proficient in FastAPI, Vector DBs, React, and RAG architectures.');
-//   const [guidelines, setGuidelines] = useState('Test system thinking, caching layers, retrieval latency, and rubric-driven metrics.');
-//   const [questionBank, setQuestionBank] = useState('1. How do you mitigate hallucinations?\n2. What caching strategy handles high concurrency?');
-//   const [techDocs, setTechDocs] = useState('Stack: Python FastAPI, ChromaDB, Gemini 1.5, Redis, React 18 frontend.');
-
-//   const [messages, setMessages] = useState([
-//     { 
-//       speaker: 'AI Interviewer', 
-//       text: 'Welcome! Today we will evaluate your systems knowledge. How do you design chunking strategies to minimize semantic loss in RAG pipelines?' 
-//     }
-//   ]);
-//   const [currentInput, setCurrentInput] = useState('');
-//   const [managerProbe, setManagerProbe] = useState('');
-//   const [isLoading, setIsLoading] = useState(false);
-//   const [errorMessage, setErrorMessage] = useState('');
-//   const [scorecard, setScorecard] = useState(null);
-
-//   const handleIngest = async () => {
-//     setIsLoading(true);
-//     setErrorMessage('');
-//     try {
-//       const res = await fetch('http://localhost:8000/api/knowledge/ingest', {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({
-//           role_title: roleTitle,
-//           job_description: jobDescription,
-//           guidelines,
-//           question_bank: questionBank,
-//           tech_documentation: techDocs,
-//           evaluation_criteria: [
-//             { name: 'Architecture & System Design', weight: '40%' },
-//             { name: 'RAG & Retrieval Depth', weight: '35%' },
-//             { name: 'Clarity & Problem Solving', weight: '25%' }
-//           ]
-//         })
-//       });
-//       if (!res.ok) throw new Error(await res.text());
-//       alert('Artifacts ingested and vectorized successfully!');
-//       setActiveTab('live');
-//     } catch (err) {
-//       setErrorMessage(`Ingestion failed: ${err.message}. Is backend running?`);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
-//   const handleSendMessage = async () => {
-//     if (!currentInput.trim() || isLoading) return;
-    
-//     const candidateText = currentInput.trim();
-//     const newHistory = [...messages, { speaker: 'Candidate', text: candidateText }];
-    
-//     setMessages(newHistory);
-//     setCurrentInput('');
-//     setIsLoading(true);
-//     setErrorMessage('');
-
-//     try {
-//       const res = await fetch('http://localhost:8000/api/interview/turn', {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({
-//           session_id: 'session-01',
-//           current_stage: 'Technical Architecture Deep-Dive',
-//           transcript_history: newHistory,
-//           candidate_answer: candidateText,
-//           manager_probe_injection: managerProbe
-//         })
-//       });
-
-//       if (!res.ok) {
-//         const errorData = await res.json().catch(() => ({ detail: 'Server Error' }));
-//         throw new Error(errorData.detail || `HTTP ${res.status}`);
-//       }
-
-//       const data = await res.json();
-//       setMessages([...newHistory, { speaker: 'AI Interviewer', text: data.interviewer_reply }]);
-//       setManagerProbe('');
-//     } catch (err) {
-//       console.error('Failed to get AI reply:', err);
-//       setErrorMessage(`Failed to receive AI reply: ${err.message}. Check backend terminal.`);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
-//   const handleEvaluate = async () => {
-//     setIsLoading(true);
-//     setErrorMessage('');
-//     try {
-//       const res = await fetch('http://localhost:8000/api/interview/evaluate', {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({
-//           role_title: roleTitle,
-//           transcript: messages,
-//           evaluation_criteria: [
-//             { name: 'Architecture & System Design', weight: '40%' },
-//             { name: 'RAG & Retrieval Depth', weight: '35%' },
-//             { name: 'Clarity & Problem Solving', weight: '25%' }
-//           ]
-//         })
-//       });
-//       if (!res.ok) throw new Error('Evaluation request failed');
-//       const data = await res.json();
-//       setScorecard(data);
-//       setActiveTab('scorecard');
-//     } catch (err) {
-//       setErrorMessage(`Evaluation error: ${err.message}`);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-//       {/* Top Header */}
-//       <header className="border-b border-slate-800 px-6 py-4 flex justify-between items-center bg-slate-900/60 backdrop-blur sticky top-0 z-50">
-//         <div className="flex items-center gap-3">
-//           <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center font-bold text-sm">AI</div>
-//           <span className="font-semibold text-lg tracking-tight">Interview Intelligence Studio</span>
-//         </div>
-//         <div className="flex gap-2">
-//           {['upload', 'live', 'scorecard'].map((tab) => (
-//             <button
-//               key={tab}
-//               onClick={() => setActiveTab(tab)}
-//               className={`px-3 py-1.5 text-xs rounded-md uppercase font-semibold tracking-wider transition ${
-//                 activeTab === tab ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'
-//               }`}
-//             >
-//               {tab === 'upload' ? '1. Knowledge Hub' : tab === 'live' ? '2. Live Interview' : '3. Scorecard'}
-//             </button>
-//           ))}
-//         </div>
-//       </header>
-
-//       {/* Global Error Banner */}
-//       {errorMessage && (
-//         <div className="bg-rose-950/80 border-b border-rose-800 px-6 py-2.5 flex items-center gap-2 text-rose-300 text-xs">
-//           <AlertCircle className="w-4 h-4 shrink-0" />
-//           <span>{errorMessage}</span>
-//         </div>
-//       )}
-
-//       {/* Main Content */}
-//       <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
-//         {activeTab === 'upload' && (
-//           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//             <div className="space-y-4">
-//               <div>
-//                 <label className="block text-xs font-semibold text-slate-400 mb-1">Target Position</label>
-//                 <input
-//                   type="text"
-//                   value={roleTitle}
-//                   onChange={(e) => setRoleTitle(e.target.value)}
-//                   className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-sm focus:border-indigo-500 focus:outline-none"
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-xs font-semibold text-slate-400 mb-1">Job Description</label>
-//                 <textarea
-//                   rows={4}
-//                   value={jobDescription}
-//                   onChange={(e) => setJobDescription(e.target.value)}
-//                   className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-sm focus:border-indigo-500 focus:outline-none"
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-xs font-semibold text-slate-400 mb-1">Interview Guidelines</label>
-//                 <textarea
-//                   rows={3}
-//                   value={guidelines}
-//                   onChange={(e) => setGuidelines(e.target.value)}
-//                   className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-sm focus:border-indigo-500 focus:outline-none"
-//                 />
-//               </div>
-//             </div>
-
-//             <div className="space-y-4">
-//               <div>
-//                 <label className="block text-xs font-semibold text-slate-400 mb-1">Question Bank</label>
-//                 <textarea
-//                   rows={4}
-//                   value={questionBank}
-//                   onChange={(e) => setQuestionBank(e.target.value)}
-//                   className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-sm focus:border-indigo-500 focus:outline-none"
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-xs font-semibold text-slate-400 mb-1">Technical Specs & Docs</label>
-//                 <textarea
-//                   rows={4}
-//                   value={techDocs}
-//                   onChange={(e) => setTechDocs(e.target.value)}
-//                   className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-sm focus:border-indigo-500 focus:outline-none"
-//                 />
-//               </div>
-//               <button
-//                 onClick={handleIngest}
-//                 disabled={isLoading}
-//                 className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 font-semibold rounded text-sm flex items-center justify-center gap-2 transition"
-//               >
-//                 {isLoading ? <RefreshCw className="animate-spin w-4 h-4" /> : <UploadCloud className="w-4 h-4" />}
-//                 Ingest & Process Vector Base
-//               </button>
-//             </div>
-//           </div>
-//         )}
-
-//         {activeTab === 'live' && (
-//           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[75vh]">
-//             <div className="lg:col-span-2 flex flex-col bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
-//               <div className="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/80">
-//                 <span className="text-xs font-semibold text-emerald-400 flex items-center gap-2">
-//                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-//                   Active Stage: Technical Architecture Deep-Dive
-//                 </span>
-//                 <button
-//                   onClick={handleEvaluate}
-//                   disabled={isLoading}
-//                   className="text-xs bg-rose-600 hover:bg-rose-500 text-white font-medium px-3 py-1 rounded transition"
-//                 >
-//                   Conclude & Score
-//                 </button>
-//               </div>
-
-//               <div className="flex-1 p-4 overflow-y-auto space-y-4">
-//                 {messages.map((m, idx) => (
-//                   <div key={idx} className={`flex flex-col ${m.speaker === 'Candidate' ? 'items-end' : 'items-start'}`}>
-//                     <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
-//                       {m.speaker === 'Candidate' ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3 text-indigo-400" />}
-//                       {m.speaker}
-//                     </div>
-//                     <div className={`p-3 rounded-lg text-sm max-w-xl leading-relaxed ${
-//                       m.speaker === 'Candidate'
-//                         ? 'bg-indigo-600 text-white rounded-br-none'
-//                         : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700'
-//                     }`}>
-//                       {m.text}
-//                     </div>
-//                   </div>
-//                 ))}
-
-//                 {/* Animated thinking/loading indicator */}
-//                 {isLoading && (
-//                   <div className="flex flex-col items-start">
-//                     <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
-//                       <Bot className="w-3 h-3 text-indigo-400" /> AI Interviewer
-//                     </div>
-//                     <div className="bg-slate-800 border border-slate-700 p-3 rounded-lg rounded-bl-none text-slate-400 text-xs flex items-center gap-2">
-//                       <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>
-//                       Evaluating response & formulating next probe...
-//                     </div>
-//                   </div>
-//                 )}
-//               </div>
-
-//               <div className="p-3 border-t border-slate-800 flex gap-2">
-//                 <input
-//                   type="text"
-//                   placeholder="Type candidate reply..."
-//                   value={currentInput}
-//                   onChange={(e) => setCurrentInput(e.target.value)}
-//                   onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-//                   disabled={isLoading}
-//                   className="flex-1 bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 disabled:opacity-50"
-//                 />
-//                 <button 
-//                   onClick={handleSendMessage} 
-//                   disabled={isLoading || !currentInput.trim()} 
-//                   className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded transition disabled:opacity-50"
-//                 >
-//                   <Send className="w-4 h-4" />
-//                 </button>
-//               </div>
-//             </div>
-
-//             {/* Manager Observer Panel */}
-//             <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col justify-between">
-//               <div>
-//                 <h3 className="font-semibold text-xs tracking-wider uppercase text-indigo-400 flex items-center gap-2 mb-2">
-//                   <ShieldAlert className="w-4 h-4" /> Manager Telemetry & Probe
-//                 </h3>
-//                 <p className="text-xs text-slate-400 mb-3">
-//                   Direct the AI to probe candidate on specific architectural tradeoffs or edge cases on their next turn.
-//                 </p>
-//                 <textarea
-//                   rows={4}
-//                   placeholder="e.g. Probe on cache invalidation or high concurrency bottlenecks..."
-//                   value={managerProbe}
-//                   onChange={(e) => setManagerProbe(e.target.value)}
-//                   className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs focus:outline-none focus:border-indigo-500"
-//                 />
-//               </div>
-//               <div className="p-3 bg-slate-950 border border-slate-800 rounded text-xs space-y-1">
-//                 <p className="text-slate-400">Target Role: <span className="text-slate-100 font-medium">{roleTitle}</span></p>
-//                 <p className="text-slate-400">RAG Context: <span className="text-emerald-400 font-medium">Ready</span></p>
-//               </div>
-//             </div>
-//           </div>
-//         )}
-
-//         {activeTab === 'scorecard' && (
-//           <div className="bg-slate-900 border border-slate-800 rounded-lg p-6 max-w-4xl mx-auto space-y-6">
-//             <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-//               <div>
-//                 <h2 className="text-lg font-bold">Automated Evaluation Summary</h2>
-//                 <p className="text-xs text-slate-400">Parsed against uploaded requirements</p>
-//               </div>
-//               {scorecard && (
-//                 <div className="text-right">
-//                   <span className="text-xs uppercase tracking-wider text-slate-400 block">Decision</span>
-//                   <span className="text-sm font-bold text-emerald-400">{scorecard.overall_decision} ({scorecard.composite_score}/100)</span>
-//                 </div>
-//               )}
-//             </div>
-
-//             {scorecard ? (
-//               <div className="space-y-6">
-//                 <p className="text-sm bg-slate-950 p-4 border border-slate-800 rounded text-slate-300">
-//                   {scorecard.summary}
-//                 </p>
-//                 <div className="space-y-3">
-//                   {scorecard.rubric_scores?.map((rubric, idx) => (
-//                     <div key={idx} className="bg-slate-950 border border-slate-800 p-4 rounded">
-//                       <div className="flex justify-between text-sm font-semibold mb-1">
-//                         <span>{rubric.dimension}</span>
-//                         <span className="text-indigo-400">{rubric.score}/{rubric.max_score}</span>
-//                       </div>
-//                       <p className="text-xs text-emerald-400 mt-1">✓ {rubric.evidence}</p>
-//                       {rubric.gap && <p className="text-xs text-rose-400 mt-1">✗ {rubric.gap}</p>}
-//                     </div>
-//                   ))}
-//                 </div>
-//               </div>
-//             ) : (
-//               <p className="text-slate-500 text-sm text-center py-10">
-//                 Execute an interview session and click "Conclude & Score" to inspect results.
-//               </p>
-//             )}
-//           </div>
-//         )}
-//       </main>
-//     </div>
-//   );
-// }
-
-
-
-
 import React, { useState } from 'react';
 import { 
   UploadCloud, Send, ShieldAlert, 
   RefreshCw, Bot, User 
 } from 'lucide-react';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('upload');
@@ -390,7 +31,7 @@ export default function App() {
 
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/knowledge/ingest', {
+      const res = await fetch(`${API_BASE_URL}/api/knowledge/ingest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -452,7 +93,7 @@ export default function App() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('http://localhost:8000/api/interview/turn', {
+      const res = await fetch(`${API_BASE_URL}/api/interview/turn`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -494,7 +135,7 @@ export default function App() {
   const handleEvaluate = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/interview/evaluate', {
+      const res = await fetch(`${API_BASE_URL}/api/interview/evaluate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -511,7 +152,6 @@ export default function App() {
       setActiveTab('scorecard');
     } catch (err) {
       console.warn('Evaluation fallback:', err);
-      // Strictly calculate mathematical average across candidate turns
       const candidateMsgs = messages.filter(m => m.speaker === 'Candidate').map(m => m.text);
       let passedCount = 0;
       let totalQuestions = candidateMsgs.length || 1;
@@ -725,7 +365,7 @@ export default function App() {
                   <ShieldAlert className="w-4 h-4" /> Manager Telemetry & Probe
                 </h3>
                 <p className="text-xs text-slate-400 mb-3">
-                  Inject live directives or custom follow-up questions during the interview[cite: 1, 2, 3].
+                  Inject live directives or custom follow-up questions during the interview.
                 </p>
                 <textarea
                   rows={4}
