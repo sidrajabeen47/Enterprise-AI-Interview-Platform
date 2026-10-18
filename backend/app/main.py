@@ -1,114 +1,3 @@
-# import os
-# import json
-# from fastapi import FastAPI, HTTPException
-# from fastapi.middleware.cors import CORSMiddleware
-# from .schemas import (
-#     KnowledgeUploadRequest, GeneratePlanRequest,
-#     InterviewTurnRequest, EvaluateTranscriptRequest
-# )
-# from .rag_service import RAGService
-# from .prompts import PLAN_SYSTEM_PROMPT, INTERVIEWER_SYSTEM_PROMPT, EVALUATION_SYSTEM_PROMPT
-
-# app = FastAPI(title="AI Interviewer Core API")
-
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# rag_service = RAGService()
-# sessions = {}
-
-# @app.get("/api/health")
-# async def health_check():
-#     return {"status": "ok", "service": "Interview Core API"}
-
-# @app.post("/api/knowledge/ingest")
-# async def ingest_knowledge(data: KnowledgeUploadRequest):
-#     try:
-#         rag_service.ingest_documents({
-#             "Job Description": data.job_description,
-#             "Guidelines": data.guidelines,
-#             "Question Bank": data.question_bank,
-#             "Tech Specs": data.tech_documentation,
-#             "Rubrics": json.dumps(data.evaluation_criteria)
-#         })
-#         sessions[data.role_title] = data.dict()
-#         return {"status": "success", "message": f"Artifacts ingested for {data.role_title}"}
-#     except Exception as e:
-#         print(f"Error during ingestion: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# @app.post("/api/interview/generate-plan")
-# async def generate_interview_plan(data: GeneratePlanRequest):
-#     try:
-#         context = rag_service.retrieve_context(f"Structured plan and stages for {data.role_title}")
-#         prompt = f"{PLAN_SYSTEM_PROMPT}\n\nRetrieved Context:\n{context}\n\nRole: {data.role_title}"
-#         response = rag_service.llm.invoke(prompt)
-#         content_text = response.content if hasattr(response, 'content') else str(response)
-#         clean_json = content_text.replace("```json", "").replace("```", "").strip()
-#         return json.loads(clean_json)
-#     except Exception as e:
-#         print(f"Error generating plan: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# @app.post("/api/interview/turn")
-# async def interview_turn(data: InterviewTurnRequest):
-#     try:
-#         # Build conversational history
-#         history_text = "\n".join([f"{msg['speaker']}: {msg['text']}" for msg in data.transcript_history[-6:]])
-#         context = rag_service.retrieve_context(f"Relevant question for stage: {data.current_stage}")
-
-#         manager_directive = ""
-#         if data.manager_probe_injection and data.manager_probe_injection.strip():
-#             manager_directive = f"\n[CRITICAL NOTE FROM MANAGER: Ask this next or probe this aspect: '{data.manager_probe_injection}']"
-
-#         prompt = f"""{INTERVIEWER_SYSTEM_PROMPT.format(role_title='Candidate')}
-
-# Grounding Knowledge Context:
-# {context}
-
-# Current Interview Stage: {data.current_stage}
-
-# Recent Dialogue:
-# {history_text}
-# {manager_directive}
-
-# Now generate the interviewer's next response:"""
-
-#         response = rag_service.llm.invoke(prompt)
-#         reply_text = response.content if hasattr(response, 'content') else str(response)
-#         return {"interviewer_reply": reply_text.strip()}
-#     except Exception as e:
-#         print(f"\n❌ Error in /api/interview/turn: {e}\n")
-#         raise HTTPException(status_code=500, detail=f"LLM Turn failed: {str(e)}")
-
-# @app.post("/api/interview/evaluate")
-# async def evaluate_interview(data: EvaluateTranscriptRequest):
-#     try:
-#         transcript_str = "\n".join([f"{t['speaker']}: {t['text']}" for t in data.transcript])
-#         criteria_str = json.dumps(data.evaluation_criteria, indent=2)
-
-#         prompt = f"""{EVALUATION_SYSTEM_PROMPT}
-
-# Rubrics:
-# {criteria_str}
-
-# Interview Transcript:
-# {transcript_str}
-# """
-#         response = rag_service.llm.invoke(prompt)
-#         content_text = response.content if hasattr(response, 'content') else str(response)
-#         clean_json = content_text.replace("```json", "").replace("```", "").strip()
-#         return json.loads(clean_json)
-#     except Exception as e:
-#         print(f"Evaluation error: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
 import os
 import re
 import json
@@ -361,63 +250,68 @@ Output strict JSON:
                 "note": "Answer consists of incoherent or random characters."
             }
 
-        # Penalize anti-patterns
-        bad_keywords = ["delay(", "busy-wait", "while(true)", "global volatile", "restart board", "reset pin"]
-        if any(b in a_lower for b in bad_keywords):
+        # Context-aware anti-pattern check
+        is_bad = False
+        if "delay(" in a_lower or "while(true)" in a_lower or "global volatile" in a_lower:
+            is_bad = True
+        elif "busy-wait" in a_lower and not ("avoid" in a_lower or "without" in a_lower or "no " in a_lower):
+            is_bad = True
+
+        if is_bad:
             return {
                 "score": 20,
                 "status": "Failed (Hazardous Anti-Pattern)",
                 "note": "Proposed unsafe practices (blocking delay, un-synchronized global state, or busy-waiting)."
             }
 
-        # FreeRTOS & Task Scheduling
+        # Q1: FreeRTOS & Task Scheduling
         if "freertos" in q_lower or "starvation" in q_lower or "task" in q_lower:
             keywords = ["vtaskdelay", "queue", "yield", "priority", "mutex", "event group", "pin", "core"]
             matched = sum(1 for k in keywords if k in a_lower)
-            if matched >= 3:
+            if matched >= 2:
                 return {"score": 95, "status": "Passed", "note": "Demonstrated non-blocking RTOS scheduling and task prioritization."}
             elif matched >= 1:
-                return {"score": 55, "status": "Partial", "note": "Mentioned RTOS concepts but lacked implementation depth."}
+                return {"score": 60, "status": "Partial", "note": "Mentioned RTOS concepts but lacked implementation depth."}
             else:
                 return {"score": 25, "status": "Failed", "note": "Failed to explain RTOS scheduling or non-blocking primitives."}
 
-        # I2C / Hardware Bus Recovery
+        # Q2: I2C / Hardware Bus Recovery
         elif "i2c" in q_lower or "sda" in q_lower or "bus" in q_lower:
             keywords = ["clock", "scl", "pulse", "stop", "gpio", "9", "pull", "reset", "toggle"]
             matched = sum(1 for k in keywords if k in a_lower)
-            if matched >= 3:
+            if matched >= 2:
                 return {"score": 95, "status": "Passed", "note": "Accurately detailed manual clock toggling and STOP condition generation."}
             elif matched >= 1:
-                return {"score": 50, "status": "Partial", "note": "Identified bus lockup but missed recovery protocol steps."}
+                return {"score": 60, "status": "Partial", "note": "Identified bus lockup but missed recovery protocol steps."}
             else:
                 return {"score": 20, "status": "Failed", "note": "Incorrect or missing hardware bus recovery procedure."}
 
-        # Power / Brownout / Concurrency
-        elif "brownout" in q_lower or "power" in q_lower or "isr" in q_lower:
-            keywords = ["capacitor", "decoupling", "rtc", "interrupt", "threshold", "sleep", "brownout", "fromisr"]
+        # Q3: Power / Brownout / Concurrency
+        elif "brownout" in q_lower or "power" in q_lower or "isr" in q_lower or "failure" in q_lower:
+            keywords = ["capacitor", "decoupling", "rtc", "interrupt", "threshold", "sleep", "brownout", "rail", "voltage"]
             matched = sum(1 for k in keywords if k in a_lower)
-            if matched >= 3:
+            if matched >= 2:
                 return {"score": 95, "status": "Passed", "note": "Thorough handling of power rail stabilization and register state preservation."}
             elif matched >= 1:
-                return {"score": 55, "status": "Partial", "note": "Basic awareness of power dips without robust hardware isolation."}
+                return {"score": 60, "status": "Partial", "note": "Basic awareness of power dips without robust hardware isolation."}
             else:
                 return {"score": 25, "status": "Failed", "note": "Failed to mitigate voltage transients or brownout resets."}
 
-        # RAG & Chunking
+        # Q4: RAG & Chunking
         elif "chunk" in q_lower or "rag" in q_lower or "vector" in q_lower:
             keywords = ["token", "overlap", "parent", "metadata", "hierarchical", "recursive", "embedding"]
             matched = sum(1 for k in keywords if k in a_lower)
-            if matched >= 3:
+            if matched >= 2:
                 return {"score": 95, "status": "Passed", "note": "Detailed sliding-window boundaries and parent-document retrieval."}
             elif matched >= 1:
-                return {"score": 55, "status": "Partial", "note": "Basic awareness of chunking without structural mitigation."}
+                return {"score": 60, "status": "Partial", "note": "Basic awareness of chunking without structural mitigation."}
             else:
                 return {"score": 25, "status": "Failed", "note": "Failed to address semantic loss in vector search."}
 
         # General Technical fallback
         else:
-            if len(a.split()) > 25 and is_meaningful_english(a):
-                return {"score": 85, "status": "Passed", "note": "Coherent technical response provided."}
+            if len(a.split()) > 20 and is_meaningful_english(a):
+                return {"score": 90, "status": "Passed", "note": "Coherent technical response provided."}
             else:
                 return {"score": 35, "status": "Failed", "note": "Response too brief or lacking technical verification."}
 
@@ -436,7 +330,6 @@ Output strict JSON:
         elif res['score'] >= 85:
             green_flags.append(f"Question {idx} Passed: {res['note']}")
 
-    # Calculate arithmetic mean
     composite_score = round(sum(scores) / len(scores))
 
     if composite_score >= 90 and len(red_flags) == 0:
